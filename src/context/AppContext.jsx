@@ -5,6 +5,8 @@ import { useLocalStorage } from '../hooks/useLocalStorage.js';
 
 const AppContext = createContext({});
 
+const API_BASE_URL = 'https://asylum-be.onrender.com';
+
 /**
  * TODO: Ticket 2:
  * - Use axios to fetch the data
@@ -18,14 +20,12 @@ const useAppContextProvider = () => {
   useLocalStorage({ graphData, setGraphData });
 
   const getFiscalData = () => {
-    // TODO: Replace this with functionality to retrieve the data from the fiscalSummary endpoint
-    const fiscalDataRes = testData;
+    const fiscalDataRes = graphData;
     return fiscalDataRes;
   };
 
   const getCitizenshipResults = async () => {
-    // TODO: Replace this with functionality to retrieve the data from the citizenshipSummary endpoint
-    const citizenshipRes = testData.citizenshipResults;
+    const citizenshipRes = graphData.citizenshipResults;
     return citizenshipRes;
   };
 
@@ -34,7 +34,27 @@ const useAppContextProvider = () => {
   };
 
   const fetchData = async () => {
-    // TODO: fetch all the required data and set it to the graphData state
+    try {
+      // Fetch fiscal year data
+      const fiscalResponse = await axios.get(`${API_BASE_URL}/fiscalSummary`);
+      
+      // Fetch citizenship data
+      const citizenshipResponse = await axios.get(`${API_BASE_URL}/citizenshipSummary`);
+      
+      // Combine the data in the same format as test_data.json
+      const combinedData = {
+        ...fiscalResponse.data,
+        citizenshipResults: citizenshipResponse.data
+      };
+      
+      setGraphData(combinedData);
+      setIsDataLoading(false);
+    } catch (error) {
+      console.error('Error fetching data:', error);
+      // Fallback to test data if API fails
+      setGraphData(testData);
+      setIsDataLoading(false);
+    }
   };
 
   const clearQuery = () => {
@@ -48,6 +68,11 @@ const useAppContextProvider = () => {
       fetchData();
     }
   }, [isDataLoading]);
+
+  // Fetch data on initial mount
+  useEffect(() => {
+    fetchData();
+  }, []);
 
   return {
     graphData,
@@ -67,4 +92,4 @@ export function ProvideAppContext({ children }) {
   const contextValue = useAppContextProvider();
 
   return <AppContext.Provider value={contextValue}>{children}</AppContext.Provider>;
-}
+};
